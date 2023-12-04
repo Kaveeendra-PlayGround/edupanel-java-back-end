@@ -9,17 +9,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.sql.DataSource;
 import javax.validation.Valid;
 import java.sql.*;
 import java.util.concurrent.TimeUnit;
 
-import javax.sql.DataSource;
 import javax.validation.Constraint;
-import javax.validation.Valid;
-import java.sql.*;
-import java.util.concurrent.TimeUnit;
+
 
 @RestController
 @RequestMapping("/api/v1/lecturers")
@@ -106,9 +104,49 @@ public class LecturerHttpController {
         System.out.println("updateLecturerDetails()");
     }
 
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{lecturer-id}")
-    public void deleteLecturer(){
-        System.out.println("deleteLecturer()");
+    public void deleteLecturer(@PathVariable("lecturer-id") int lecturerId){
+        try(Connection connection = pool.getConnection()){
+            PreparedStatement stmExits = connection.prepareStatement("SELECT * FROM lecturer WHERE id =?");
+            stmExits.setInt(1, lecturerId);
+            if(!stmExits.executeQuery().next()) throw new ResponseStatusException((HttpStatus.NOT_FOUND));
+
+            connection.setAutoCommit(false);
+            try{
+                PreparedStatement stmIdentify = connection.prepareStatement("SELECT l.id, l.name, ftr.`rank` AS ftr , ptr.`rank` AS ptr FROM lecturer l LEFT OUTER JOIN full_time_rank ftr ON l.id = ftr.lecturer_id " +
+                        "LEFT OUTER JOIN part_time_rank ptr ON l.id = ptr.lecturer_id " +
+                        "WHERE l.id = ?");
+                stmIdentify.setInt(1, lecturerId);
+                ResultSet rst = stmIdentify.executeQuery();
+                rst.next();
+                int ftr = rst.getInt("ftr");
+                int ptr = rst.getInt("ptr");
+                String picture = rst.getString("picture");
+                String tableName = ftr> 0 ? "full_time_rank" : "part_time_rank";
+                int rank = ftr > 0 ? ftr : ptr;
+                Statement stmDeleteRank = connection.createStatement();
+                stmDeleteRank.executeUpdate("DELETE FROM " + tableName + " WHERE `rank`" + rank);
+                Statement stmShift = connection.createStatement();
+                stmShift.executeUpdate("UPDATE "+ tableName +" SET `rank` = `rank` - 1 WHERE `rank` > " + rank);
+
+                PreparedStatement stmDeleteLecturer = connection.prepareStatement("DELETE FROM lecturer WHERE id = ?");
+                stmDeleteLecturer.setInt(1, lecturerId);
+                stmDeleteLecturer.executeUpdate();
+
+                if (picture != null)  bucket.get(picture).delete();
+
+                connection.commit();
+
+            }catch (Throwable t){
+                connection.rollback();
+                throw t;
+            }finally {
+                connection.setAutoCommit(false);
+            }
+        }catch (Exception e){
+            throw new RuntimeException(e);
+        }
     }
 
     @GetMapping

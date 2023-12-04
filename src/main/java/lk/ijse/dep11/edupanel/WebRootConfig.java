@@ -1,4 +1,4 @@
-package lk.ijse.dep11;
+package lk.ijse.dep11.edupanel;
 
 import org.springframework.context.annotation.Configuration;
 

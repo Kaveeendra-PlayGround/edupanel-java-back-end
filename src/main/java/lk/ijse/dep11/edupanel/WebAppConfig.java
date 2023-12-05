@@ -21,8 +21,8 @@ public class WebAppConfig {
 
     @Bean
     public Bucket defaultBucket() throws IOException {
-        InputStream serviceAccount =
-                getClass().getResourceAsStream("/edupanel-153cc-firebase-adminsdk-zfi82-ca16b01d83.json");
+        InputStream serviceAccount = getClass()
+                .getResourceAsStream("/edupanel-153cc-firebase-adminsdk-zfi82-3ce247643c.json");
 
         FirebaseOptions options = new FirebaseOptions.Builder()
                 .setCredentials(GoogleCredentials.fromStream(serviceAccount))
@@ -34,7 +34,7 @@ public class WebAppConfig {
     }
 
     @Bean
-    public StandardServletMultipartResolver multipartResolver(){
+    public StandardServletMultipartResolver multipartResolver() {
         return new StandardServletMultipartResolver();
     }
 }

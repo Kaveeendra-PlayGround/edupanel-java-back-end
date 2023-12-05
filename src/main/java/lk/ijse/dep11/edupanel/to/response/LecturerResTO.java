@@ -5,13 +5,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class LecturerResTO {
-
     private Integer id;
     private String name;
-    private String Designation;
+    private String designation;
     private String qualifications;
     private String type;
     private String pictureUrl;

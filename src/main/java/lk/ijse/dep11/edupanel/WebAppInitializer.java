@@ -1,24 +1,13 @@
 package lk.ijse.dep11.edupanel;
 
-import com.google.auth.oauth2.GoogleCredentials;
-import com.google.cloud.storage.Bucket;
-import com.google.firebase.FirebaseApp;
-import com.google.firebase.FirebaseOptions;
-import com.google.firebase.cloud.StorageClient;
-import org.springframework.context.annotation.Bean;
 import org.springframework.web.filter.FormContentFilter;
 import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
 
 import javax.servlet.Filter;
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.ServletRegistration;
-import java.io.IOException;
-import java.io.InputStream;
 
 public class WebAppInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
-
-
-
     @Override
     protected Class<?>[] getRootConfigClasses() {
         return new Class[]{WebRootConfig.class};
@@ -43,5 +32,4 @@ public class WebAppInitializer extends AbstractAnnotationConfigDispatcherServlet
     protected Filter[] getServletFilters() {
         return new Filter[]{new FormContentFilter()};
     }
-
 }

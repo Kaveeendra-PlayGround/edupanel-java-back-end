@@ -29,17 +29,17 @@ public class LecturerHttpController {
     @Autowired
     private Bucket bucket;
 
-    //************* Create New Lecturer ***************
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping(consumes = "multipart/form-data", produces = "application/json")
-    public LecturerResTO createNewLecturer(@ModelAttribute @Valid LecturerReqTO lecturer){
-        System.out.println(lecturer);
-        System.out.println("createNewLecturer()");
-        try (Connection connection = pool.getConnection()){
+    public LecturerResTO createNewLecturer(@ModelAttribute LecturerReqTO lecturer) {
+        try (Connection connection = pool.getConnection()) {
             connection.setAutoCommit(false);
-            try{
-                PreparedStatement stmInsertLecturer = connection.prepareStatement("INSERT INTO lecturer " +
-                        "(name, description, qualification, linkedin) VALUES (?,?,?,?)", Statement.RETURN_GENERATED_KEYS);
+
+            try {
+                PreparedStatement stmInsertLecturer = connection
+                        .prepareStatement("INSERT INTO lecturer " +
+                                "(name, designation, qualifications, linkedin) " +
+                                "VALUES (?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS);
                 stmInsertLecturer.setString(1, lecturer.getName());
                 stmInsertLecturer.setString(2, lecturer.getDesignation());
                 stmInsertLecturer.setString(3, lecturer.getQualifications());
@@ -47,28 +47,32 @@ public class LecturerHttpController {
                 stmInsertLecturer.executeUpdate();
                 ResultSet generatedKeys = stmInsertLecturer.getGeneratedKeys();
                 generatedKeys.next();
-                int lecturerId = generatedKeys.getInt("1");
+                int lecturerId = generatedKeys.getInt(1);
                 String picture = lecturerId + "-" + lecturer.getName();
-                if(lecturer.getPicture() != null && !lecturer.getPicture().isEmpty()){
-                    PreparedStatement stmUpdateLecturer = connection.prepareStatement("UPDATE lecturer SET picture = ? WHERE id = ?");
+
+                if (lecturer.getPicture() != null && !lecturer.getPicture().isEmpty()) {
+                    PreparedStatement stmUpdateLecturer = connection
+                            .prepareStatement("UPDATE lecturer SET picture = ? WHERE id = ?");
                     stmUpdateLecturer.setString(1, picture);
                     stmUpdateLecturer.setInt(2, lecturerId);
                     stmUpdateLecturer.executeUpdate();
                 }
+
                 final String table = lecturer.getType().equalsIgnoreCase("full-time")
-                        ? "full_time_rank": "part_time_rank";
+                        ? "full_time_rank" : "part_time_rank";
                 Statement stm = connection.createStatement();
                 ResultSet rst = stm.executeQuery("SELECT `rank` FROM " + table + " ORDER BY `rank` DESC LIMIT 1");
                 int rank;
                 if (!rst.next()) rank = 1;
                 else rank = rst.getInt("rank") + 1;
                 PreparedStatement stmInsertRank = connection
-                        .prepareStatement("INSERT INTO "+ table + " (lecturer_id, `rank`) VALUES (?, ?)");
+                        .prepareStatement("INSERT INTO " + table + " (lecturer_id, `rank`) VALUES (?, ?)");
                 stmInsertRank.setInt(1, lecturerId);
                 stmInsertRank.setInt(2, rank);
                 stmInsertRank.executeUpdate();
+
                 String pictureUrl = null;
-                if (lecturer.getPicture() != null && !lecturer.getPicture().isEmpty()){
+                if (lecturer.getPicture() != null && !lecturer.getPicture().isEmpty()) {
                     Blob blob = bucket.create(picture, lecturer.getPicture().getInputStream(),
                             lecturer.getPicture().getContentType());
                     pictureUrl = blob
@@ -84,73 +88,75 @@ public class LecturerHttpController {
                         lecturer.getType(),
                         pictureUrl,
                         lecturer.getLinkedin());
-            }catch (Throwable t){
+            } catch (Throwable t) {
                 connection.rollback();
                 throw t;
-            }finally {
-                connection.setAutoCommit(false);
-
-
+            } finally {
+                connection.setAutoCommit(true);
             }
-
-        }catch (Exception e){
-            throw new RuntimeException();
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
         }
-
     }
 
     @PatchMapping("/{lecturer-id}")
-    public void updateLecturerDetails(){
+    public void updateLecturerDetails() {
         System.out.println("updateLecturerDetails()");
     }
 
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping("/{lecturer-id}")
-    public void deleteLecturer(@PathVariable("lecturer-id") int lecturerId){
-        try(Connection connection = pool.getConnection()){
-            PreparedStatement stmExits = connection.prepareStatement("SELECT * FROM lecturer WHERE id =?");
-            stmExits.setInt(1, lecturerId);
-            if(!stmExits.executeQuery().next()) throw new ResponseStatusException((HttpStatus.NOT_FOUND));
+    public void deleteLecturer(@PathVariable("lecturer-id") int lecturerId) {
+        try (Connection connection = pool.getConnection()) {
+            PreparedStatement stmExists = connection.prepareStatement("SELECT * FROM lecturer WHERE id=?");
+            stmExists.setInt(1, lecturerId);
+            if (!stmExists.executeQuery().next()) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
 
             connection.setAutoCommit(false);
-            try{
-                PreparedStatement stmIdentify = connection.prepareStatement("SELECT l.id, l.name, ftr.`rank` AS ftr , ptr.`rank` AS ptr FROM lecturer l LEFT OUTER JOIN full_time_rank ftr ON l.id = ftr.lecturer_id " +
-                        "LEFT OUTER JOIN part_time_rank ptr ON l.id = ptr.lecturer_id " +
-                        "WHERE l.id = ?");
+            try {
+
+                PreparedStatement stmIdentify = connection
+                        .prepareStatement("SELECT l.id, l.name, l.picture, " +
+                                "ftr.`rank` AS ftr, ptr.`rank` AS ptr FROM lecturer l " +
+                                "LEFT OUTER JOIN full_time_rank ftr ON l.id = ftr.lecturer_id " +
+                                "LEFT OUTER JOIN part_time_rank ptr ON l.id = ptr.lecturer_id " +
+                                "WHERE l.id = ?");
                 stmIdentify.setInt(1, lecturerId);
                 ResultSet rst = stmIdentify.executeQuery();
                 rst.next();
                 int ftr = rst.getInt("ftr");
                 int ptr = rst.getInt("ptr");
                 String picture = rst.getString("picture");
-                String tableName = ftr> 0 ? "full_time_rank" : "part_time_rank";
+                String tableName = ftr > 0 ? "full_time_rank" : "part_time_rank";
                 int rank = ftr > 0 ? ftr : ptr;
+
                 Statement stmDeleteRank = connection.createStatement();
-                stmDeleteRank.executeUpdate("DELETE FROM " + tableName + " WHERE `rank`" + rank);
+                stmDeleteRank.executeUpdate("DELETE FROM " + tableName + " WHERE `rank`= " + rank);
+
                 Statement stmShift = connection.createStatement();
                 stmShift.executeUpdate("UPDATE "+ tableName +" SET `rank` = `rank` - 1 WHERE `rank` > " + rank);
 
-                PreparedStatement stmDeleteLecturer = connection.prepareStatement("DELETE FROM lecturer WHERE id = ?");
+                PreparedStatement stmDeleteLecturer = connection
+                        .prepareStatement("DELETE FROM lecturer WHERE id = ?");
                 stmDeleteLecturer.setInt(1, lecturerId);
                 stmDeleteLecturer.executeUpdate();
 
-                if (picture != null)  bucket.get(picture).delete();
+                if (picture != null) bucket.get(picture).delete();
 
                 connection.commit();
-
-            }catch (Throwable t){
+            } catch (Throwable t) {
                 connection.rollback();
                 throw t;
-            }finally {
-                connection.setAutoCommit(false);
+            } finally {
+                connection.setAutoCommit(true);
             }
-        }catch (Exception e){
+        } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
     @GetMapping
-    public void getAllLecturers(){
+    public void getAllLecturers() {
         System.out.println("getAllLecturers()");
     }
 }

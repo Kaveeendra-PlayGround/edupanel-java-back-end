@@ -11,24 +11,23 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class LecturerReqTO {
-
-    @NotBlank (message = "Name cannot be Empty")
-    @Pattern(regexp = "^[A-Za-z ]+$", message = "Invalid Name")
+    @NotBlank(message = "Name can't be empty")
+    @Pattern(regexp = "^[A-Za-z ]+$", message = "Invalid name: {value}")
     private String name;
-    @NotBlank (message = "Designation can't be empty")
-    @Length(min = 2, message = "Invalid Designation")
+    @NotBlank(message = "Designation can't be empty")
+    @Length(min = 2, message = "Invalid designation: {value}")
     private String designation;
-    @NotBlank (message = "Qualification can't be empty")
-    @Length(min = 2, message = "Invalid Qualification")
+    @NotBlank(message = "Qualifications can't be empty")
+    @Length(min = 2, message = "Invalid qualifications: {value}")
     private String qualifications;
-    @NotBlank(message = "Type cannot be empty")
+    @NotBlank(message = "Type can't be empty")
     @Pattern(regexp = "^(full-time|part-time)$", flags = Pattern.Flag.CASE_INSENSITIVE, message = "Invalid type")
     private String type;
     @LecturerImage
     private MultipartFile picture;
-    @Pattern(regexp = "^http[s]?://.+$", message = "Invalid Linkedin URL")
+    @Pattern(regexp = "^http[s]?://.+$", message = "Invalid linkedin url: {value}")
     private String linkedin;
 }

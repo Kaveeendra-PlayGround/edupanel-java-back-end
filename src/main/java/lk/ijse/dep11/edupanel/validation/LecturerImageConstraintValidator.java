@@ -6,7 +6,8 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
-public class LecturerImageConstraintValidator implements ConstraintValidator<LecturerImage, MultipartFile> {
+public class LecturerImageConstraintValidator
+        implements ConstraintValidator<LecturerImage, MultipartFile> {
 
     private long maximumFileSize;
 
@@ -17,11 +18,10 @@ public class LecturerImageConstraintValidator implements ConstraintValidator<Lec
 
     @Override
     public boolean isValid(MultipartFile multipartFile, ConstraintValidatorContext constraintValidatorContext) {
-
-        if( multipartFile == null || multipartFile.isEmpty()) return true;
-        if (multipartFile.getSize() > maximumFileSize) return  false;
+        if (multipartFile == null || multipartFile.isEmpty()) return true;
+        if (multipartFile.getSize() > maximumFileSize) return false;
         if (multipartFile.getContentType() == null) return false;
-        if(!multipartFile.getContentType().startsWith("image/")) return false;
+        if (!multipartFile.getContentType().startsWith("image/")) return false;
         return true;
     }
 }
